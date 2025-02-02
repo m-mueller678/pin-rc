@@ -1,6 +1,7 @@
-use core::cell::UnsafeCell;
-use core::marker::PhantomPinned;
+use core::cell::{Cell, UnsafeCell};
+use core::marker::{PhantomData, PhantomPinned};
 use core::pin::Pin;
+use core::sync::atomic::AtomicUsize;
 use core::sync::atomic::Ordering::{Acquire, Relaxed, Release};
 use radium::Radium;
 
@@ -10,6 +11,7 @@ const MAX_REFCOUNT: usize = usize::MAX / 2;
 pub struct PinRcGenericStorage<T, C: Radium<Item = usize>> {
     inner: UnsafeCell<Inner<T, C>>,
     _p: PhantomPinned,
+    _ps: PhantomData<*const u32>, // prevent Send and Sync
 }
 
 pub(crate) struct Inner<T, C> {
@@ -98,3 +100,13 @@ impl<T, C: Radium<Item = usize>> Drop for PinRcGeneric<T, C> {
         debug_assert!(c > 0);
     }
 }
+
+pub type PinRc<T> = PinRcGeneric<T, Cell<usize>>;
+pub type PinRcStorage<T> = PinRcGenericStorage<T, Cell<usize>>;
+pub type PinArc<T> = PinRcGeneric<T, AtomicUsize>;
+pub type PinArcStorage<T> = PinRcGenericStorage<T, AtomicUsize>;
+
+unsafe impl<T> Sync for PinArc<T> where T: Sync {}
+unsafe impl<T> Sync for PinArcStorage<T> where T: Sync {}
+unsafe impl<T> Send for PinArc<T> where T: Sync {}
+unsafe impl<T> Send for PinArcStorage<T> where T: Send + Sync {}

@@ -30,25 +30,18 @@ const _: () = const {
 };
 
 use core::borrow::Borrow;
-use core::cell::Cell;
 use core::cmp::Ordering;
 use core::fmt::{Debug, Formatter};
 use core::hash::{Hash, Hasher};
 use core::ops::Deref;
 use core::pin::Pin;
-use core::sync::atomic::AtomicUsize;
 use radium::Radium;
-
-pub type PinRc<T> = PinRcGeneric<T, Cell<usize>>;
-pub type PinRcStorage<T> = PinRcGenericStorage<T, Cell<usize>>;
-pub type PinArc<T> = PinRcGeneric<T, AtomicUsize>;
-pub type PinArcStorage<T> = PinRcGenericStorage<T, AtomicUsize>;
 
 #[allow(unsafe_code)]
 mod generic_rc;
 
 use crate::generic_rc::Inner;
-pub use generic_rc::{PinRcGeneric, PinRcGenericStorage};
+pub use generic_rc::*;
 
 impl<T, C: Radium<Item = usize>> Deref for PinRcGenericStorage<T, C> {
     type Target = T;
