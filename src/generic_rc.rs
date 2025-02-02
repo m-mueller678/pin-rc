@@ -68,6 +68,7 @@ impl<T, C: Radium<Item = usize>> PinRcGenericStorage<T, C> {
                 count: C::new(0),
             }),
             _p: Default::default(),
+            _ps: PhantomData,
         }
     }
 
