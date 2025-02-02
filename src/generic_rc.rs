@@ -6,6 +6,7 @@ use radium::Radium;
 
 const MAX_REFCOUNT: usize = usize::MAX / 2;
 
+/// The common implementation shared by [PinRcStorage](crate::PinRcStorage) and [PinArcStorage](crate::PinArcStorage).
 pub struct PinRcGenericStorage<T, C: Radium<Item = usize>> {
     inner: UnsafeCell<Inner<T, C>>,
     _p: PhantomPinned,
@@ -82,6 +83,7 @@ impl<T, C: Radium<Item = usize>> PinRcGenericStorage<T, C> {
     }
 }
 
+/// The common implementation shared by [PinRc](crate::PinRc) and [PinArc](crate::PinArc).
 pub struct PinRcGeneric<T, C: Radium<Item = usize>>(*const Inner<T, C>);
 
 impl<T, C: Radium<Item = usize>> PinRcGeneric<T, C> {

@@ -1,6 +1,29 @@
 #![no_std]
 #![deny(unsafe_code)]
 
+//! This crate provides reference counting pointers similar to `Rc` and `Arc`, but without heap allocation.
+//! You are responsible for creating a `Pin{Arc|Rc}Storage`, which you can obtain `Pin{Arc|Rc}` pointers from.
+//! The storage needs to be pinned, for example using [`pin`](core::pin::pin).
+//!
+//! ```rust
+//! # use std::pin::pin;
+//! # use pin_rc::{PinArc, PinArcStorage};
+//! let storage = pin!(PinArcStorage::new(4));
+//! let arc = storage.as_ref().create_handle();
+//! println!("{arc:?}");
+//! ```
+//!
+//! If the storage is dropped before all references to it are released, the program is aborted (even if you have set panics to unwind):
+//! ```should_panic
+//! # use std::pin::pin;
+//! # use pin_rc::{PinArc,PinArcStorage};
+//! fn escaping_handle() -> PinArc<u32> {
+//!     let storage = pin!(PinArcStorage::new(4));
+//!     storage.as_ref().create_handle()
+//! }
+//! escaping_handle();
+//! ```
+
 #[cfg(all(feature = "unsafe_disable_abort", not(debug_assertions)))]
 const _: () = const {
     panic!("the feature unsafe_disable_abort should only be used for testing this crate. Enabling it makes the api unsound.")
@@ -24,6 +47,7 @@ pub type PinArcStorage<T> = PinRcGenericStorage<T, AtomicUsize>;
 #[allow(unsafe_code)]
 mod generic_rc;
 
+use crate::generic_rc::Inner;
 pub use generic_rc::{PinRcGeneric, PinRcGenericStorage};
 
 impl<T, C: Radium<Item = usize>> Deref for PinRcGenericStorage<T, C> {
@@ -44,6 +68,14 @@ impl<T, C: Radium<Item = usize>> PinRcGenericStorage<T, C> {
     }
 
     /// Create a handle referring to `self`.
+    /// Note that this takes `Pin<&Self>`.
+    /// If you have a `Pin<&mut Self>`, call `as_ref`:
+    /// ```rust
+    /// # use std::pin::pin;
+    /// # use pin_rc::{PinArc, PinArcStorage};
+    /// # let storage=pin!(PinArcStorage::new(4));
+    /// let arc = storage.as_ref().create_handle();
+    /// ```
     pub fn create_handle(self: Pin<&Self>) -> PinRcGeneric<T, C> {
         self.inner().create_handle()
     }
@@ -96,7 +128,7 @@ impl_cmp_trait!(Eq{} for PinRcGenericStorage);
 impl_cmp_trait!(PartialOrd{partial_cmp->Option<Ordering>,lt->bool,le->bool,gt->bool,ge->bool} for PinRcGenericStorage);
 impl_cmp_trait!(Ord{cmp->Ordering} for PinRcGenericStorage);
 
-macro_rules! impl_hash_borrow {
+macro_rules! impl_others {
     ($For:ident) => {
         impl<T: Hash, C: Radium<Item = usize>> Hash for $For<T, C> {
             fn hash<H: Hasher>(&self, state: &mut H) {
@@ -109,24 +141,23 @@ macro_rules! impl_hash_borrow {
                 self
             }
         }
-    };
-}
 
-impl_hash_borrow!(PinRcGeneric);
-impl_hash_borrow!(PinRcGenericStorage);
-
-macro_rules! impl_other_trait {
-    ($Trait:ident{$($method:ident($($arg:ident:$Arg:ty),*)->$Ret:ty),*} for $For:ident) => {
-        impl<T:$Trait,C:Radium<Item=usize>>  $Trait for $For<T,C>{
-            $(
-                #[inline]
-                fn $method(&self, $($arg:$Arg),*)->$Ret{
-                    <T as $Trait>::$method(&**self,$($arg),*)
-                }
-            )*
+        impl<T: Debug, C: Radium<Item = usize>> Debug for $For<T, C> {
+            fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
+                Debug::fmt(self.inner(), f)
+            }
         }
     };
 }
 
-impl_other_trait! {Debug{fmt(f: &mut Formatter<'_>)->core::fmt::Result} for PinRcGeneric}
-impl_other_trait! {Debug{fmt(f: &mut Formatter<'_>)->core::fmt::Result} for PinRcGenericStorage}
+impl_others!(PinRcGeneric);
+impl_others!(PinRcGenericStorage);
+
+impl<T: Debug, C: Radium<Item = usize>> Debug for Inner<T, C> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
+        let mut s = f.debug_struct("PinRcGeneric");
+        s.field("ref_count", &self.count());
+        s.field("value", self.value());
+        s.finish()
+    }
+}
