@@ -2,6 +2,12 @@
 name = "pin-rc"
 version = "0.1.0"
 edition = "2021"
+keywords = ["reference-counting","arc","pin"]
+categories = ["no-std::no-alloc","memory-management"]
+authors = ["m-mueller678"]
+description = "Reference counting pointers without allocation using pinning"
+repository = "https://github.com/m-mueller678/pin-rc"
+license = "MIT OR Apache-2.0"
 
 [dependencies]
 radium = "1.1.0"
