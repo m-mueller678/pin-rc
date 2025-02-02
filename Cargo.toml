@@ -1,5 +1,5 @@
 [package]
-name = "pin-rc"
+name = "pin-arc"
 version = "0.1.0"
 edition = "2021"
 keywords = ["reference-counting","arc","pin"]
