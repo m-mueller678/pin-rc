@@ -1,4 +1,4 @@
-use pin_rc::PinRcStorage;
+use pin_arc::PinRcStorage;
 use std::pin::pin;
 
 #[test]

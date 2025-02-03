@@ -7,7 +7,7 @@
 //!
 //! ```rust
 //! # use std::pin::pin;
-//! # use pin_rc::{PinArc, PinArcStorage};
+//! # use pin_arc::{PinArc, PinArcStorage};
 //! let storage = pin!(PinArcStorage::new(4));
 //! let arc = storage.as_ref().create_handle();
 //! println!("{arc:?}");
@@ -16,7 +16,7 @@
 //! If the storage is dropped before all references to it are released, the program is aborted (even if you have set panics to unwind):
 //! ```should_panic
 //! # use std::pin::pin;
-//! # use pin_rc::{PinArc,PinArcStorage};
+//! # use pin_arc::{PinArc,PinArcStorage};
 //! fn escaping_handle() -> PinArc<u32> {
 //!     let storage = pin!(PinArcStorage::new(4));
 //!     storage.as_ref().create_handle()
@@ -70,7 +70,7 @@ impl<T, C: Radium<Item = usize>> PinRcGenericStorage<T, C> {
     /// If you have a `Pin<&mut Self>`, call `as_ref`:
     /// ```rust
     /// # use std::pin::pin;
-    /// # use pin_rc::{PinArc, PinArcStorage};
+    /// # use pin_arc::{PinArc, PinArcStorage};
     /// # let storage=pin!(PinArcStorage::new(4));
     /// let arc = storage.as_ref().create_handle();
     /// ```
