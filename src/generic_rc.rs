@@ -25,16 +25,20 @@ impl<T, C: Radium<Item = usize>> Inner<T, C> {
         self.count.load(Relaxed)
     }
 
-    pub(crate) fn value(&self) -> Pin<&T> {
-        unsafe { Pin::new_unchecked(&self.value) }
+    pub(crate) fn value_pin(self: Pin<&Self>) -> Pin<&T> {
+        unsafe { Pin::new_unchecked(&self.get_ref().value) }
     }
 
-    pub(crate) fn create_handle(&self) -> PinRcGeneric<T, C> {
+    pub(crate) fn value_unpin(&self) -> &T {
+        &self.value
+    }
+
+    pub(crate) fn create_handle(self: Pin<&Self>) -> PinRcGeneric<T, C> {
         let old_count = self.count.fetch_add(1, Relaxed);
         if old_count > MAX_REFCOUNT {
             abort()
         }
-        PinRcGeneric(NonNull::from(self))
+        PinRcGeneric(NonNull::from(self.get_ref()))
     }
 }
 
@@ -54,7 +58,7 @@ fn abort() -> ! {
 
 impl<T, C: Radium<Item = usize>> Drop for PinRcGenericStorage<T, C> {
     fn drop(&mut self) {
-        if self.inner().count.load(Acquire) != 0 {
+        if self.inner_unpin().count.load(Acquire) != 0 {
             abort()
         }
     }
@@ -75,14 +79,18 @@ impl<T, C: Radium<Item = usize>> PinRcGenericStorage<T, C> {
 
     /// Get a mutable reference to the contents if there are no handles referring to `self`.
     pub fn get_pin_mut(self: Pin<&mut Self>) -> Option<Pin<&mut T>> {
-        if self.inner().count.load(Acquire) == 0 {
+        if self.as_ref().inner_unpin().count.load(Acquire) == 0 {
             Some(unsafe { Pin::new_unchecked(&mut (*self.inner.get()).value) })
         } else {
             None
         }
     }
 
-    pub(crate) fn inner(&self) -> &Inner<T, C> {
+    pub(crate) fn inner_pin(self: Pin<&Self>) -> Pin<&Inner<T, C>> {
+        unsafe { Pin::new_unchecked(&*self.inner.get()) }
+    }
+
+    pub(crate) fn inner_unpin(&self) -> &Inner<T, C> {
         unsafe { &*self.inner.get() }
     }
 }
@@ -91,14 +99,18 @@ impl<T, C: Radium<Item = usize>> PinRcGenericStorage<T, C> {
 pub struct PinRcGeneric<T, C: Radium<Item = usize>>(NonNull<Inner<T, C>>);
 
 impl<T, C: Radium<Item = usize>> PinRcGeneric<T, C> {
-    pub(crate) fn inner(&self) -> &Inner<T, C> {
-        unsafe { self.0.as_ref() }
+    pub(crate) fn inner_pin(&self) -> Pin<&Inner<T, C>> {
+        unsafe { Pin::new_unchecked(self.0.as_ref()) }
+    }
+
+    pub(crate) fn inner_unpin(&self) -> &Inner<T, C> {
+        self.inner_pin().get_ref()
     }
 }
 
 impl<T, C: Radium<Item = usize>> Drop for PinRcGeneric<T, C> {
     fn drop(&mut self) {
-        let c = self.inner().count.fetch_sub(1, Release);
+        let c = self.inner_unpin().count.fetch_sub(1, Release);
         debug_assert!(c > 0);
     }
 }

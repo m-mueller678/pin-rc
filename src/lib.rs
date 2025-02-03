@@ -47,7 +47,7 @@ impl<T, C: Radium<Item = usize>> Deref for PinRcGenericStorage<T, C> {
     type Target = T;
 
     fn deref(&self) -> &Self::Target {
-        self.inner().value().get_ref()
+        self.inner_unpin().value_unpin()
     }
 }
 
@@ -57,12 +57,12 @@ impl<T, C: Radium<Item = usize>> PinRcGenericStorage<T, C> {
     /// Concurrent operations may change the count between
     /// the time you observe it and the time you act on the observation.
     pub fn ref_count(&self) -> usize {
-        self.inner().count()
+        self.inner_unpin().count()
     }
 
     /// Get a pinned reference to the contained value.
-    pub fn get_pinned(&self) -> Pin<&T> {
-        self.inner().value()
+    pub fn get_pin(self: Pin<&Self>) -> Pin<&T> {
+        self.inner_pin().value_pin()
     }
 
     /// Create a handle referring to `self`.
@@ -75,7 +75,7 @@ impl<T, C: Radium<Item = usize>> PinRcGenericStorage<T, C> {
     /// let arc = storage.as_ref().create_handle();
     /// ```
     pub fn create_handle(self: Pin<&Self>) -> PinRcGeneric<T, C> {
-        self.inner().create_handle()
+        self.inner_pin().create_handle()
     }
 }
 
@@ -85,12 +85,12 @@ impl<T, C: Radium<Item = usize>> PinRcGeneric<T, C> {
     /// Concurrent operations may change the count between
     /// the time you observe it and the time you act on the observation.
     pub fn ref_count(&self) -> usize {
-        self.inner().count()
+        self.inner_unpin().count()
     }
 
     /// Get a pinned reference to the contained value.
-    pub fn get_pinned(&self) -> Pin<&T> {
-        self.inner().value()
+    pub fn get_pin(&self) -> Pin<&T> {
+        self.inner_pin().value_pin()
     }
 }
 
@@ -98,13 +98,13 @@ impl<T, C: Radium<Item = usize>> Deref for PinRcGeneric<T, C> {
     type Target = T;
 
     fn deref(&self) -> &Self::Target {
-        self.inner().value().get_ref()
+        self.inner_pin().value_pin().get_ref()
     }
 }
 
 impl<T, C: Radium<Item = usize>> Clone for PinRcGeneric<T, C> {
     fn clone(&self) -> Self {
-        self.inner().create_handle()
+        self.inner_pin().create_handle()
     }
 }
 
@@ -147,7 +147,7 @@ macro_rules! impl_others {
 
         impl<T: Debug, C: Radium<Item = usize>> Debug for $For<T, C> {
             fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
-                Debug::fmt(self.inner(), f)
+                Debug::fmt(self.inner_unpin(), f)
             }
         }
     };
@@ -160,7 +160,7 @@ impl<T: Debug, C: Radium<Item = usize>> Debug for Inner<T, C> {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         let mut s = f.debug_struct("PinRcGeneric");
         s.field("ref_count", &self.count());
-        s.field("value", &*self.value());
+        s.field("value", self.value_unpin());
         s.finish()
     }
 }
