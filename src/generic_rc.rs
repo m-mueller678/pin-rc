@@ -1,6 +1,7 @@
 use core::cell::{Cell, UnsafeCell};
 use core::marker::{PhantomData, PhantomPinned};
 use core::pin::Pin;
+use core::ptr::NonNull;
 use core::sync::atomic::AtomicUsize;
 use core::sync::atomic::Ordering::{Acquire, Relaxed, Release};
 use radium::Radium;
@@ -33,7 +34,7 @@ impl<T, C: Radium<Item = usize>> Inner<T, C> {
         if old_count > MAX_REFCOUNT {
             abort()
         }
-        PinRcGeneric(self)
+        PinRcGeneric(NonNull::from(self))
     }
 }
 
@@ -87,11 +88,11 @@ impl<T, C: Radium<Item = usize>> PinRcGenericStorage<T, C> {
 }
 
 /// The common implementation shared by [PinRc](crate::PinRc) and [PinArc](crate::PinArc).
-pub struct PinRcGeneric<T, C: Radium<Item = usize>>(*const Inner<T, C>);
+pub struct PinRcGeneric<T, C: Radium<Item = usize>>(NonNull<Inner<T, C>>);
 
 impl<T, C: Radium<Item = usize>> PinRcGeneric<T, C> {
     pub(crate) fn inner(&self) -> &Inner<T, C> {
-        unsafe { &*self.0 }
+        unsafe { self.0.as_ref() }
     }
 }
 
