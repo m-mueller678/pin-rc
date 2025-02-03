@@ -24,8 +24,8 @@ impl<T, C: Radium<Item = usize>> Inner<T, C> {
         self.count.load(Relaxed)
     }
 
-    pub(crate) fn value(&self) -> &T {
-        &self.value
+    pub(crate) fn value(&self) -> Pin<&T> {
+        unsafe { Pin::new_unchecked(&self.value) }
     }
 
     pub(crate) fn create_handle(&self) -> PinRcGeneric<T, C> {

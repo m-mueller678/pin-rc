@@ -47,7 +47,7 @@ impl<T, C: Radium<Item = usize>> Deref for PinRcGenericStorage<T, C> {
     type Target = T;
 
     fn deref(&self) -> &Self::Target {
-        self.inner().value()
+        self.inner().value().get_ref()
     }
 }
 
@@ -58,6 +58,11 @@ impl<T, C: Radium<Item = usize>> PinRcGenericStorage<T, C> {
     /// the time you observe it and the time you act on the observation.
     pub fn ref_count(&self) -> usize {
         self.inner().count()
+    }
+
+    /// Get a pinned reference to the contained value.
+    pub fn get_pinned(&self) -> Pin<&T> {
+        self.inner().value()
     }
 
     /// Create a handle referring to `self`.
@@ -82,13 +87,18 @@ impl<T, C: Radium<Item = usize>> PinRcGeneric<T, C> {
     pub fn ref_count(&self) -> usize {
         self.inner().count()
     }
+
+    /// Get a pinned reference to the contained value.
+    pub fn get_pinned(&self) -> Pin<&T> {
+        self.inner().value()
+    }
 }
 
 impl<T, C: Radium<Item = usize>> Deref for PinRcGeneric<T, C> {
     type Target = T;
 
     fn deref(&self) -> &Self::Target {
-        self.inner().value()
+        self.inner().value().get_ref()
     }
 }
 
@@ -150,7 +160,7 @@ impl<T: Debug, C: Radium<Item = usize>> Debug for Inner<T, C> {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         let mut s = f.debug_struct("PinRcGeneric");
         s.field("ref_count", &self.count());
-        s.field("value", self.value());
+        s.field("value", &*self.value());
         s.finish()
     }
 }
