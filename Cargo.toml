@@ -1,6 +1,6 @@
 [package]
 name = "pin-arc"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 keywords = ["reference-counting","arc","pin"]
 categories = ["no-std::no-alloc","memory-management"]
